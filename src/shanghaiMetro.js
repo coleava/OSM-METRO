@@ -3,8 +3,6 @@ import { Map, TileLayer, GeoJSON } from 'react-leaflet'
 import L, { divIcon } from 'leaflet'
 import metro from './shanhai.json'
 
-// import "./styles.css";
-
 export default () => {
   const getLineColor = (tags) => {
     const colors = {
