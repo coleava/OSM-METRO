@@ -1,7 +1,7 @@
 import './App.css'
-import L from 'leaflet'
+// import L from 'leaflet'
 import React, { useEffect } from 'react'
-import meterGeo from './shanhai.json'
+import meterGeo from './shanghai.json'
 
 function App() {
   // const [geoData, setGeoData] = useState({})
