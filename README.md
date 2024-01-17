@@ -1,70 +1,31 @@
-# Getting Started with Create React App
+采用leaflet库实现
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+1. 获取geo数据 ，包括上海市地铁线路及对应线路的站点数据
+2. 安装axios leaflet leaflet-iconmaterial  leaflet-providers 
 
-## Available Scripts
+# 地铁线路及对应站点数据 因各个平台提供的有差异 
+这里以以OSM本身导出的数据和百度地图提供的数据为例
 
-In the project directory, you can run:
+subway.json是通过OSM查询并导出的geo格式的地理数据
+station.json是通过百度地图获取到的站点geo地理数据
 
-### `npm start`
+差异: 
+  格式上有差异
+  经纬度对应的点位有差异(误差)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+实现: 
+ 1. 将百度地图地铁线路数据转为OSM相对应格式的数据
+ 2. 加载地图 
+ 
+ const mapContainer = document.getElementById('map')
+ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map) 
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+ 3. 加载geo数据
+ L.geoJSON(metro, {
+      // ...options
+  }).addTo(map)
+  L.geoJSON(stationsGeoJson, {
+        pointToLayer: setIcon,
+  }).addTo(map)
 
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+  
