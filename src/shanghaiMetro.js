@@ -122,7 +122,11 @@ export default () => {
         let { kn } = properties
         if (kn.includes(selectedLine.line)) {
           lay.setStyle({
-            weight: 8,
+            weight: 10,
+          })
+        } else {
+          lay.setStyle({
+            weight: 4,
           })
         }
       })
@@ -195,7 +199,7 @@ export default () => {
   const resetHighlight = (e) => {
     var layer = e.target
     layer.setStyle({
-      weight: 3,
+      weight: 4,
       opacity: 1,
     })
   }
@@ -226,6 +230,7 @@ export default () => {
         }
       }
     })
+    setSelected(true)
   }
 
   const closeMarkerPopup = () => {
@@ -267,7 +272,7 @@ export default () => {
 
   const setColor = ({ properties }) => {
     var color = getLineColor(properties)
-    return { color, weight: 3, fillOpacity: 1 }
+    return { color, weight: 4, fillOpacity: 1 }
   }
 
   const filterOption = (node) => {
