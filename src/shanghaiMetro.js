@@ -7,7 +7,29 @@ import 'leaflet/dist/leaflet.css'
 
 import station from './station.json'
 import subway from './subway.json'
-import _ from 'lodash'
+import _, { forEach } from 'lodash'
+import coordtransform from 'coordtransform'
+
+class Geojson {
+  constructor(features = [], metaData = {}) {
+    this.type = 'FeatureCollection'
+    this.metadata = metaData
+    this.features = features
+  }
+}
+class Geometry {
+  constructor(type, coordinates) {
+    this.type = type
+    this.coordinates = coordinates
+  }
+}
+class Feature {
+  constructor(geomType, properties, coordinates) {
+    this.type = 'Feature'
+    this.properties = properties
+    this.geometry = new Geometry(geomType, coordinates)
+  }
+}
 
 export default () => {
   const [selectedLine, setSelectedLine] = useState({})
@@ -15,6 +37,7 @@ export default () => {
   const [container, setMap] = useState(null)
   const [stationArray, setStationArray] = useState([])
   const [selectStation, setSelectedStation] = useState({})
+  const [subwayLayer, setSubwayLayer] = useState(null)
   const stationConvert = () => {
     var geojson = {
       type: 'FeatureCollection',
@@ -63,35 +86,48 @@ export default () => {
   }
 
   const convertSubway = () => {
-    var geojson = {
-      type: 'FeatureCollection',
-      features: [],
-    }
-    let res = subway['l']
-    for (var i = 0; i < res.length; i++) {
-      const r = res[i]
-      var st = r['st']
-      var coords = []
-      for (let j = 0; j < st.length; j++) {
-        var s = st[j]
-        var _coords = s.sl?.split(',')?.map(Number)
-        _coords && coords.push(_coords)
-      }
-      geojson.features.push({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: coords,
-        },
-        properties: r,
+    let l = station['l']
+    let lines = [],
+      stations = []
+    l.forEach(({ kn, st }) => {
+      let lineCoords = []
+      st.forEach((d) => {
+        const sl = d.sl.split(',').map(Number)
+        lineCoords.push(sl)
+        stations.push(new Feature('Point', d, sl))
+        // lineCoords.push(coordtransform.bd09togcj02(sl[0],sl[1]))
+        // stations.push(new Feature('Point', d, coordtransform.bd09togcj02(sl[0],sl[1])))
       })
+      lines.push(new Feature('LineString', { kn }, lineCoords))
+    })
+    const linesGeojson = new Geojson(lines)
+    const stationsGeojson = new Geojson(stations)
+    return {
+      linesGeojson,
+      stationsGeojson,
     }
-    return geojson
   }
 
   useEffect(() => {
     loadMap()
   }, [])
+
+  useEffect(() => {
+    if (!_.isEmpty(selectedLine)) {
+      let layers = subwayLayer.getLayers()
+
+      _.forEach(layers, (lay) => {
+        let { feature } = lay
+        let { properties } = feature
+        let { kn } = properties
+        if (kn.includes(selectedLine.line)) {
+          lay.setStyle({
+            weight: 8,
+          })
+        }
+      })
+    }
+  }, [selectedLine])
 
   const loadMap = () => {
     const mapContainer = document.getElementById('map')
@@ -99,18 +135,22 @@ export default () => {
     if (mapContainer && !mapContainer.hasChildNodes()) {
       let map = L.map('map').setView([31.2304, 121.4737], 11)
 
+      let { linesGeojson } = convertSubway()
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map)
-      L.geoJSON(metro, {
+      let subwayLayer = L.geoJSON(linesGeojson, {
         style: setColor,
-        filter: filterOption,
+        // filter: filterOption,
+        onEachFeature: onEachFeature,
       }).addTo(map)
 
       let { stationsGeoJson, _stationArray } = objectConvertArray()
+
       L.geoJSON(stationsGeoJson, {
         pointToLayer: setIcon,
       }).addTo(map)
       setStationArray(_stationArray)
       setMap(map)
+      setSubwayLayer(subwayLayer)
     }
   }
 
@@ -132,6 +172,34 @@ export default () => {
     }
   }
 
+  const onEachFeature = (feature, layer) => {
+    layer.on({
+      click: highlightFeature,
+      mouseout: resetHighlight,
+    })
+  }
+
+  const highlightFeature = (e) => {
+    var layer = e.target
+    layer.setStyle({
+      weight: 10,
+      opacity: 1,
+    })
+
+    setSelectedLine({
+      line: layer.feature.properties.kn,
+      stationArray: layer.feature.geometry.coordinates,
+    })
+  }
+
+  const resetHighlight = (e) => {
+    var layer = e.target
+    layer.setStyle({
+      weight: 3,
+      opacity: 1,
+    })
+  }
+
   const clickLine = (selectedLine) => {
     setSelected(true)
     setSelectedLine(selectedLine)
@@ -139,8 +207,6 @@ export default () => {
 
   const clickStation = (selectedStation) => {
     updateMarkerIcon(selectedStation.geometry.coordinates[1], selectedStation.geometry.coordinates[0])
-    // let marker = L.marker(L.latLng(selectedStation.geometry.coordinates[1], selectedStation.geometry.coordinates[0]))
-    // marker.setIcon()
   }
 
   const updateMarkerIcon = (lat, lng) => {
@@ -156,7 +222,7 @@ export default () => {
               iconSize: [36, 36],
             })
           )
-          marker.openPopup();
+          marker.openPopup()
         }
       }
     })
@@ -165,39 +231,43 @@ export default () => {
   const closeMarkerPopup = () => {
     container.eachLayer(function (layer) {
       if (layer instanceof L.Marker) {
-        layer.closePopup();
+        layer.closePopup()
       }
     })
   }
 
-  const getLineColor = (tags) => {
-    const colors = {
-      1: '#DA291C',
-      2: '#97D700',
-      3: '#FFD700',
-      4: '#0066CC',
-      5: '#AA007C',
-      6: '#D9027D',
-      7: '#FF69B4',
-      8: '#00C1F3',
-      9: '#71C5E8',
-      10: '#009C95',
-      11: '#A41E32',
-      12: '#007B5F',
-      13: '#FFCD00',
-      14: '#73C1E1',
-      15: '#A15E3B',
-      16: '#A757A8',
-      17: '#FF6E4A',
-      18: '#FF6666',
-    }
+  const getLineColor = ({ kn }) => {
+    const lineColors = [
+      { line: '地铁1号线', color: '#FF0000' },
+      { line: '地铁2号线', color: '#97D700' },
+      { line: '地铁3号线', color: '#FFD700' },
+      { line: '地铁4号线', color: '#6E3C8E' },
+      { line: '地铁5号线', color: '#AA007C' },
+      { line: '地铁6号线', color: '#C76395' },
+      { line: '地铁7号线', color: '#FF5A00' },
+      { line: '地铁8号线', color: '#0060A9' },
+      { line: '地铁9号线', color: '#71C5E8' },
+      { line: '地铁10号线', color: '#DA70D6' },
+      { line: '地铁11号线', color: '#782F40' },
+      { line: '地铁12号线', color: '#007B5F' },
+      { line: '地铁13号线', color: '#FF69B4' },
+      { line: '地铁14号线', color: '#BBA786' },
+      { line: '地铁15号线', color: '#A15E3B' },
+      { line: '地铁16号线', color: '#A757A8' },
+      { line: '地铁17号线', color: '#FF6E4A' },
+      { line: '地铁18号线', color: '#997B66' },
+      { line: '磁悬浮', color: '#00A4E4' },
+      { line: '轨道交通浦江线', color: '#DA291C' },
+    ]
 
-    return colors[tags['ref']]
+    let find = _.find(lineColors, (x) => kn.includes(x.line))
+    return find.color
+    // return colors[tags['ref']]
   }
 
   const setColor = ({ properties }) => {
     var color = getLineColor(properties)
-    return { color: color, weight: 1 }
+    return { color, weight: 3, fillOpacity: 1 }
   }
 
   const filterOption = (node) => {
@@ -207,9 +277,9 @@ export default () => {
   const setIcon = (node, latlng) => {
     // return L.marker(latlng, { icon:  customMarkerIcon(properties.Name)
     let icon = L.icon({
-      iconUrl: require('./icon/banglocation.png'),
+      iconUrl: require('./icon/location.png'),
       iconSize: [24, 24],
-      iconAnchor: [16, 32],
+      // iconAnchor: [16, 32], 图标偏移量
     })
 
     let marker = L.marker(latlng, {
@@ -239,7 +309,7 @@ export default () => {
 
           marker.setIcon(
             L.icon({
-              iconUrl: require('./icon/banglocation.png'),
+              iconUrl: require('./icon/location.png'),
               iconSize: [36, 36],
             })
           )
@@ -253,10 +323,17 @@ export default () => {
     return marker
   }
 
-  const back = ()=> {
+  const back = () => {
     setSelected(false)
     setSelectedStation({})
     closeMarkerPopup()
+    let layers = subwayLayer.getLayers()
+
+    _.forEach(layers, (lay) => {
+      lay.setStyle({
+        weight: 3,
+      })
+    })
   }
 
   return (
@@ -277,9 +354,16 @@ export default () => {
       {!selected && (
         <div className="line-list">
           {_.map(stationArray, (x, index) => (
-            <h3 key={index} className="line-name" onClick={() => clickLine(x)}>
-              {x.line}
-            </h3>
+            <div
+              style={{ display: 'flex', alignItems: 'center', margin: 0, backgroundColor: selectedLine && selectedLine.line === x.line ? '#f0f0f0' : '' }}
+              onClick={() => clickLine(x)}
+              className="line-list-item"
+            >
+              <h3 key={index} className="line-name" style={{ width: '60%' }}>
+                {x.line}
+              </h3>
+              <span style={{ display: 'inline-block', backgroundColor: getLineColor({ kn: x.line }), width: 20, height: 4, marginLeft: 10 }}></span>
+            </div>
           ))}
         </div>
       )}
@@ -291,7 +375,6 @@ export default () => {
           </div>
           <div style={{ height: 450, overflowY: 'auto' }}>
             {_.map(selectedLine.stations, (s) => {
-              console.log('s', s)
               return (
                 <div key={s.properties.id} id={s.properties.id} className="station" onClick={() => clickStation(s)}>
                   {s.properties.name}

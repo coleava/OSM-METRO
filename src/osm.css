@@ -44,13 +44,12 @@
 
 .line-list .line-name {
   cursor: pointer;
-  height: 16px;
-  padding: 4px;
+  height: 8px;
   display: flex;
   align-items: center;
 }
 
-.line-station-list .station:hover, .line-list .line-name:hover {
+.line-station-list .station:hover, .line-list .line-list-item:hover {
   background-color: #f0f0f0;
   
 }

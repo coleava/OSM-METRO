@@ -7,14 +7,14 @@
 这里以以OSM本身导出的数据和百度地图提供的数据为例
 
 subway.json是通过OSM查询并导出的geo格式的地理数据
-station.json是通过百度地图获取到的站点geo地理数据
+station.json是通过高德地图获取到的站点geo地理数据
 
 差异: 
   格式上有差异
   经纬度对应的点位有差异(误差)
 
 实现: 
- 1. 将百度地图地铁线路数据转为OSM相对应格式的数据
+ 1. 将高德地图地铁线路数据转为OSM相对应格式的数据
  2. 加载地图 
  
  const mapContainer = document.getElementById('map')
